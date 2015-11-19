@@ -226,7 +226,7 @@ void RainDrop(landscape_t *landscape, double A, int N){
     }
 }
 
-bool Absorb(landscape_t * landscape, double A, int N){
+bool Absorb(landscape_t * landscape, double A, int N, int k){
     //Traverse over all landscape points
     int i,j;
     bool flag=false;
@@ -234,8 +234,14 @@ bool Absorb(landscape_t * landscape, double A, int N){
     for (i=1; i<=N; i++) {
         for (j=1; j<=N; j++) {
             
+            if (k>0) {
+                //1) Receive a new raindrop
+                landscape->raindrops[i][j]+=1;
+            }
+
+            
             //2) If there are raindrops on a point, absorb water into the point
-            if(fabs(landscape->raindrops[i][j]) > 10e-20){
+            if(fabs(landscape->raindrops[i][j]) > 10e-15){
                 landscape->absorption[i][j]+=A*landscape->raindrops[i][j];
                 landscape->raindrops[i][j]-=A*landscape->raindrops[i][j];
                 flag=true;
@@ -281,7 +287,7 @@ bool Absorb(landscape_t * landscape, double A, int N){
                     }
                 }
                 
-                double portion=landscape->trickle[i][j]/s;
+                double portion=landscape->trickle[i][j]/(double)s;
                 
                 for (x=i-1; x<=i+1; x++) {
                     for (y=j-1; y<=j+1; y++) {
@@ -292,7 +298,6 @@ bool Absorb(landscape_t * landscape, double A, int N){
                         }
                     }
                 }
-                
                 
             }
             else{
@@ -311,20 +316,23 @@ Landscape Rainfall(char *filename, int M, double A, int N){
     
     landscape_t *landscape = Landscape_Init(filename,N);
     
-    int i, j,k;
+    int i, j,k=M;
     
+    /*
     for (k=0; k<M; k++) {
         
         RainDrop(landscape, A,N);
         
     }
+     */
     
-    landscape->complete_step=M;
+    landscape->complete_step=0;
     
 
 
-    while(Absorb(landscape,A,N)) { //continue to absorb when return true;
+    while(Absorb(landscape,A,N,k)) { //continue to absorb when return true;
         landscape->complete_step++;
+        k--;
     }
     
     return landscape;
@@ -365,7 +373,7 @@ int main(int argc, char** argv)
         }
         printf("\n");
     }
-    /*
+    
     printf("printing raindrops\n");
     for (i=1; i<=N; i++) {
         for (j=1; j<=N; j++) {
@@ -380,7 +388,7 @@ int main(int argc, char** argv)
         }
         printf("\n");
     }
-    */
+    
     
     Landscape_Destroy(&landscape);
 
