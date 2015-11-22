@@ -18,7 +18,7 @@
 
 #define NUM_THREADS 2
 
-//pthread_barrier_t  barrier; // barrier synchronization object
+pthread_barrier_t  barrier; // barrier synchronization object
 
 typedef struct{
     int ** elevation;
@@ -212,7 +212,7 @@ void Trickle(int i, int j){
 void *Absorb(void * arg){
     
     int index= *((int *) arg);  
-
+       printf("%d", index);
     //compute Bound for this thread
     int startrow = index * N/NUM_THREADS;  
     int endrow = (index+1) * (N/NUM_THREADS) - 1;  
@@ -220,7 +220,6 @@ void *Absorb(void * arg){
     int i, j;
 
     //Traversal over blocks dealed in this thread
-    int drained=0;
 
     for (i=startrow;i<=endrow; i++) {
         for (j=0; j<N; j++) {
@@ -231,13 +230,13 @@ void *Absorb(void * arg){
             if (landscape->raindrops[i][j] > A) {
                 landscape->absorption[i][j]+=A;
                 landscape->raindrops[i][j]-=A;
+                //printf("drainning");
             }
-            else if(landscape->raindrops[i][j]<=A && landscape->raindrops[i][j]>10e-6){
+            else {
                 landscape->absorption[i][j]+=landscape->raindrops[i][j];
                 landscape->raindrops[i][j]=0;
-            }
-            else{
-                drained++;
+                landscape->drained++;
+		
             }
 
             //3a) Calculate the amount of raindrops that will next trickle to the lowest neighbor
@@ -249,15 +248,17 @@ void *Absorb(void * arg){
             }
         }
     }
-    landscape->drained+=drained;
-
     
-    for (i=startrow; i<endrow; i++) {
+
+    pthread_barrier_wait (&barrier);
+    
+    for (i=startrow; i<=endrow; i++) {
         for (j=0; j<N; j++) {
             Trickle(i ,j);
         }
     }
     
+    pthread_exit(NULL);
 
     return NULL;
 }
@@ -270,67 +271,25 @@ void Rainfall(char *filename){
     landscape->drained=0;
 
     
-    //pthread_t *threads = (pthread_t *) malloc(NUM_THREADS * sizeof(pthread_t));
-    //int *p;
+    pthread_t *threads = (pthread_t *) malloc(NUM_THREADS * sizeof(pthread_t));
+    int *p;
     int i,j;
-
-    int drained;
-    while(landscape->drained!=N*N){
-        
-        drained=0;
-        for (i=0;i<N; i++) {
-            for (j=0; j<N; j++) {
-
-                if (landscape->complete_step<M) {
-                //1) Receive a new raindrop
-                    landscape->raindrops[i][j]+=1;
-                }
-
-                if (landscape->raindrops[i][j]<10e-20){
-                    drained++;
-                }
-                else if(landscape->raindrops[i][j] > A) {
-                    landscape->absorption[i][j]+=A;
-                    landscape->raindrops[i][j]-=A;
-                }
-                else{
-                    landscape->absorption[i][j]+=landscape->raindrops[i][j];
-                    landscape->raindrops[i][j]=0;
-                }
-
-            //3a) Calculate the amount of raindrops that will next trickle to the lowest neighbor
-                if(landscape->raindrops[i][j]>1){
-                    landscape->trickle[i][j]=1;
-                }
-                else{
-                 landscape->trickle[i][j]=landscape->raindrops[i][j];
-                }
-            }
-        }
-
-        landscape->drained=max(drained,landscape->drained);
-
-        for (i=0; i<N; i++) {
-            for (j=0; j<N; j++) {
-                Trickle(i ,j);
-            }
-        }
-        landscape->complete_step++;
-
     
-        /*
-        for (int i = 0; i < NUM_THREADS; ++i ){
-            p = (int *) malloc(sizeof(int));  
-            *p = i*N/NUM_THREADS;    
-            pthread_create(&threads[i], NULL, Absorb, (void *)(p));
-        }
-
-
-        for (int i = 0; i < NUM_THREADS; ++i) {
-            pthread_join(threads[i], NULL);  
-        }
-        */
-
+    pthread_barrier_init (&barrier, NULL, NUM_THREADS);
+    
+    while(landscape->drained!=N*N){
+      // create a barrier object with a count of 3
+     
+      for ( i = 0; i < NUM_THREADS; i++ ){
+          p = (int *) malloc(sizeof(int));
+          *p = i;
+          pthread_create(&threads[i], NULL, Absorb, (void *)(p));
+      }
+      
+      for (i = 0; i < NUM_THREADS; ++i) {
+          pthread_join(threads[i], NULL);
+      }
+     
         
     }    
 }
