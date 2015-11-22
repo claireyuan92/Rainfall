@@ -13,8 +13,12 @@
 #include <assert.h>
 #include <time.h>
 #include <limits.h>
+#include <pthread.h>
 #include <stdbool.h>
 
+#define NUM_THREADS 2
+
+//pthread_barrier_t  barrier; // barrier synchronization object
 
 typedef struct{
     int ** elevation;
@@ -23,17 +27,23 @@ typedef struct{
     double ** trickle;
     int N;
     int complete_step;
+    int drained;
 } landscape_t;
+typedef landscape_t*  Landscape;
 
-typedef landscape_t* Landscape;
+
+int M;
+int N;
+double A;
+
+landscape_t * landscape;
 
 
-int** read_elevation(char *filename, int N){
+int** read_elevation(char *filename){
     
     int ** elevation;
     int i, j;
     
-    N=N+2;
     
     FILE *fptr;
     
@@ -49,55 +59,29 @@ int** read_elevation(char *filename, int N){
         elevation[i] = (int*)malloc(N*sizeof(int));
         assert(elevation[i]!=NULL);
         
-        elevation[i][0]=INT_MAX;
-        elevation[i][N-1]=INT_MAX;
     }
-    for (j=0; j<N; j++) {
-        elevation[0][j]=INT_MAX;
-        elevation[N-1][j]=INT_MAX;
-    }
-    
-    for (i=1; i<N-1; i++) {
-        for (j=1; j<N-1; j++) {
-            fscanf(fptr, "%d", &elevation[i][j]);
-            //printf("%d ",elevation[i][j]);
-        }
-        //printf("\n");
-    }
-    
-    /*
     
     for (i=0; i<N; i++) {
         for (j=0; j<N; j++) {
-
-            printf("%d ",elevation[i][j]);
+            fscanf(fptr, "%d", &elevation[i][j]);
         }
-        printf("\n");
     }
-     */
-
     
     fclose(fptr);
-    //printf("Finished reading image file !\n");
     
     return elevation;
     
 }
 
-Landscape Landscape_Init(char * filename, int N){
+void Landscape_Init(char * filename){
     
     int i,j;
     
-
-    
-    landscape_t * landscape;
     landscape=(landscape_t*) malloc(sizeof(landscape_t));
     assert(landscape!=NULL);
     
     landscape->N=N;
-    landscape->elevation=read_elevation(filename,N);
-    
-     N=N+2; // deal with edge problem
+    landscape->elevation=read_elevation(filename);
     
     // allocate memory for absorption matrix
     double **absorption=(double**) malloc(N*sizeof(double*));
@@ -142,166 +126,213 @@ Landscape Landscape_Init(char * filename, int N){
     
     landscape->trickle=trickle;
     
-    return landscape;
     
 }
 
-void Landscape_Destroy(Landscape * landscape){
+void Landscape_Destroy(){
     
-    free((*landscape)->elevation);
-    (*landscape)->elevation=NULL;
-    free((*landscape)->absorption);
-    (*landscape)->absorption=NULL;
-    free(*landscape);
-    *landscape=NULL;
+    free(landscape->elevation);
+    landscape->elevation=NULL;
+    free(landscape->absorption);
+    landscape->absorption=NULL;
+    free(landscape);
+    landscape=NULL;
 }
 
 int min(int a, int b){
     return a<b? a:b;
 }
+int max(int a, int b){
+    return a>b? a:b;
+}
 
-bool Absorb(landscape_t * landscape, double A, int N, int k){
-    //Traverse over all landscape points
-    int i,j;
-    bool flag=false;
+
+void Trickle(int i, int j){
     
-    for (i=1; i<=N; i++) {
-        for (j=1; j<=N; j++) {
-            
-            if (k>0) {
+    //trickle out from current point
+    landscape->raindrops[i][j]-=landscape->trickle[i][j];
+    
+    //trickle to lowest neigbhors
+    
+    int m=INT_MAX;
+    
+    if (i>0) {
+        m=min(m, landscape->elevation[i-1][j]);
+    }
+    if (i<N-1) {
+        m=min(m, landscape->elevation[i+1][j]);
+    }
+    if (j>0) {
+        m=min(m, landscape->elevation[i][j-1]);
+    }
+    if (j<N-1) {
+        m=min(m,landscape->elevation[i][j+1]);
+    }
+    
+    if(m<landscape->elevation[i][j]){
+        
+        
+        int s=0;
+        
+
+        if (i>0 && m==landscape->elevation[i-1][j]) {
+            s++;
+        }
+        if(i<N-1 && m==landscape->elevation[i+1][j]){
+            s++;
+        }
+        if (j>0 && m==landscape->elevation[i][j-1]) {
+            s++;
+        }
+        if (j<N-1 && m==landscape->elevation[i][j+1]) {
+            s++;
+        }
+        
+        double portion=landscape->trickle[i][j]/s;
+        
+        
+        if (i>0 && m==landscape->elevation[i-1][j]) {
+            landscape->raindrops[i-1][j]+=portion;
+        }
+        if(i<N-1 && m==landscape->elevation[i+1][j]){
+            landscape->raindrops[i+1][j]+=portion;
+        }
+        if (j>0 && m==landscape->elevation[i][j-1]) {
+            landscape->raindrops[i][j-1]+=portion;
+        }
+        if (j<N-1 && m==landscape->elevation[i][j+1]) {
+            landscape->raindrops[i][j+1]+=portion;
+        }
+    }
+    else{
+        landscape->raindrops[i][j]+=landscape->trickle[i][j];
+    }
+}
+
+void *Absorb(void * arg){
+    
+    int index= *((int *) arg);  
+
+    //compute Bound for this thread
+    int startrow = index * N/NUM_THREADS;  
+    int endrow = (index+1) * (N/NUM_THREADS) - 1;  
+
+    int i, j;
+
+    //Traversal over blocks dealed in this thread
+    int drained=0;
+
+    for (i=startrow;i<=endrow; i++) {
+        for (j=0; j<N; j++) {
+            if (landscape->complete_step<M) {
                 //1) Receive a new raindrop
                 landscape->raindrops[i][j]+=1;
             }
-
-            
-            //2) If there are raindrops on a point, absorb water into the point
             if (landscape->raindrops[i][j] > A) {
                 landscape->absorption[i][j]+=A;
                 landscape->raindrops[i][j]-=A;
-                flag=true;
             }
             else if(landscape->raindrops[i][j]<=A && landscape->raindrops[i][j]>10e-6){
                 landscape->absorption[i][j]+=landscape->raindrops[i][j];
                 landscape->raindrops[i][j]=0;
-                flag=true;
             }
-            else{}
-            
-            
+            else{
+                drained++;
+            }
+
             //3a) Calculate the amount of raindrops that will next trickle to the lowest neighbor
             if(landscape->raindrops[i][j]>1){
                 landscape->trickle[i][j]=1;
             }
             else{
-                landscape->trickle[i][j]=landscape->raindrops[i][j];
+               landscape->trickle[i][j]=landscape->raindrops[i][j];
             }
-            
-            
+        }
+    }
+    landscape->drained+=drained;
+
+    
+    for (i=startrow; i<endrow; i++) {
+        for (j=0; j<N; j++) {
+            Trickle(i ,j);
         }
     }
     
-    
-    //Second traversal over all landscape points
-    for (i=1; i<=N; i++) {
-        for (j=1; j<=N; j++) {
-            
-            //trickle out from current point
-            landscape->raindrops[i][j]-=landscape->trickle[i][j];
-            
-            //trickle to lowest neigbhors
-            
-            int m=min(landscape->elevation[i+1][j],
-                      min(landscape->elevation[i][j+1],
-                          min(landscape->elevation[i-1][j], landscape->elevation[i][j-1])));
-            //printf("%d  ", m);
-            
-            if(m<landscape->elevation[i][j]){
-                
-                int s=0;
-                int x,y;
-                /*
-                for (x=i-1; x<=i+1; x++) {
-                    for (y=j-1; y<=j+1; y++) {
-                        if ( !(x==i-1 && y==j-1) && !(x==i-1 && y==j+1) && !(x==i+1 && y==j-1) && !(x==i+1 && y==j+1)
-                            && m==landscape->elevation[x][y]) {
-                            s++;
-                        }
-                    }
-                }
-                 */
-                
-                if (m==landscape->elevation[i][j-1]) {
-                    s++;
-                }
-                if (m==landscape->elevation[i][j+1]) {
-                    s++;
-                }
-                if (m==landscape->elevation[i-1][j]) {
-                    s++;
-                }
-                if (m==landscape->elevation[i+1][j]) {
-                    s++;
-                }
-                
-                //printf("%lf ", 1.0/s);
-                double portion=landscape->trickle[i][j]/s;
-                
-                //printf("%lf ", portion);
-                /*
-                 
-                
-                for (x=i-1; x<=i+1; x++) {
-                    for (y=j-1; y<=j+1; y++) {
-                        if ( !(x==i-1 && y==j-1) && !(x==i-1 && y==j+1) && !(x==i+1 && y==j-1) && !(x==i+1 && y==j+1)
-                            && m==landscape->elevation[x][y]) {
-                            
-                            landscape->raindrops[x][y]+=portion;
-                        }
-                    }
-                }
-                */
-                if (m==landscape->elevation[i][j-1]) {
-                    landscape->raindrops[i][j-1]+=landscape->trickle[i][j]/s;
-                }
-                if (m==landscape->elevation[i][j+1]) {
-                    landscape->raindrops[i][j+1]+=landscape->trickle[i][j]/s;
-                }
-                if (m==landscape->elevation[i-1][j]) {
-                    landscape->raindrops[i-1][j]+=landscape->trickle[i][j]/s;
-                }
-                if (m==landscape->elevation[i+1][j]) {
-                    landscape->raindrops[i+1][j]+=landscape->trickle[i][j]/s;
-                }
-                
-            }
-            else{
-                landscape->raindrops[i][j]+=landscape->trickle[i][j];
-            }
-            
-            
-        }
-    }
-    
-    return flag;
-    
+
+    return NULL;
 }
 
-Landscape Rainfall(char *filename, int M, double A, int N){
+void Rainfall(char *filename){
     
-    landscape_t *landscape = Landscape_Init(filename,N);
-    
-    int k=M;
+    Landscape_Init(filename);
     
     landscape->complete_step=0;
+    landscape->drained=0;
 
-    while(Absorb(landscape,A,N,k)) { //continue to absorb until return false;
+    
+    //pthread_t *threads = (pthread_t *) malloc(NUM_THREADS * sizeof(pthread_t));
+    //int *p;
+    int i,j;
+
+    int drained;
+    while(landscape->drained!=N*N){
+        
+        drained=0;
+        for (i=0;i<N; i++) {
+            for (j=0; j<N; j++) {
+
+                if (landscape->complete_step<M) {
+                //1) Receive a new raindrop
+                    landscape->raindrops[i][j]+=1;
+                }
+
+                if (landscape->raindrops[i][j]<10e-20){
+                    drained++;
+                }
+                else if(landscape->raindrops[i][j] > A) {
+                    landscape->absorption[i][j]+=A;
+                    landscape->raindrops[i][j]-=A;
+                }
+                else{
+                    landscape->absorption[i][j]+=landscape->raindrops[i][j];
+                    landscape->raindrops[i][j]=0;
+                }
+
+            //3a) Calculate the amount of raindrops that will next trickle to the lowest neighbor
+                if(landscape->raindrops[i][j]>1){
+                    landscape->trickle[i][j]=1;
+                }
+                else{
+                 landscape->trickle[i][j]=landscape->raindrops[i][j];
+                }
+            }
+        }
+
+        landscape->drained=max(drained,landscape->drained);
+
+        for (i=0; i<N; i++) {
+            for (j=0; j<N; j++) {
+                Trickle(i ,j);
+            }
+        }
         landscape->complete_step++;
-        k--;
-    }
+
     
-    return landscape;
-    
-    
+        /*
+        for (int i = 0; i < NUM_THREADS; ++i ){
+            p = (int *) malloc(sizeof(int));  
+            *p = i*N/NUM_THREADS;    
+            pthread_create(&threads[i], NULL, Absorb, (void *)(p));
+        }
+
+
+        for (int i = 0; i < NUM_THREADS; ++i) {
+            pthread_join(threads[i], NULL);  
+        }
+        */
+
+        
+    }    
 }
 
 
@@ -310,60 +341,62 @@ Landscape Rainfall(char *filename, int M, double A, int N){
 
 int main(int argc, char** argv)
 {
-    landscape_t * landscape;
     
     if (argc != 5) {
         printf("Usage: main  <M> <A> <N> <elevation_file>\n");
         assert(argc == 5);
     }
     
-    int M=atoi(argv[1]); // # of simulation time steps
+    M=atoi(argv[1]); // # of simulation time steps
     
-    double A;
     sscanf(argv[2],"%lf",&A); // absorption rate
-
     
-    int N=atoi(argv[3]); // dimensionof the landscape
+    N=atoi(argv[3]); // dimension of the landscape
+    
     
     clock_t start=clock();
     
-    landscape = Rainfall(argv[4], M,A,N);
+    Rainfall(argv[4]);
     
     clock_t end = clock();
     
-    printf("Time consumed %f\n", ((double) (end - start)) / CLOCKS_PER_SEC);
+    
+    printf("Time consumed %f\n\n", ((double) (end - start)) / CLOCKS_PER_SEC);
     
     printf("Rainfall simulation took %d time steps to complete.\n", landscape->complete_step);
     
     printf("The following grid shows the number of raindrops absorbed at each point:\n");
     
+    
+    // Printing Output
     int i, j;
-    for (i=1; i<=N; i++) {
-        for (j=1; j<=N; j++) {
+    
+    for (i=0; i<N; i++) {
+        for (j=0; j<N; j++) {
             printf("%8g ", landscape->absorption[i][j]);
         }
         printf("\n");
     }
     
-    /*
+    printf("%d\n",landscape->drained);
+
     printf("printing raindrops\n");
-    for (i=1; i<=N; i++) {
-        for (j=1; j<=N; j++) {
+    for (i=0; i<N; i++) {
+        for (j=0; j<N; j++) {
             printf("%.2f ", landscape->raindrops[i][j]);
         }
         printf("\n");
     }
     printf("printing trickle\n");
-    for (i=1; i<=N; i++) {
-        for (j=1; j<=N; j++) {
+    for (i=0; i<N; i++) {
+        for (j=0; j<N; j++) {
             printf("%.2f ", landscape->trickle[i][j]);
         }
         printf("\n");
     }
     
-     */
     
-    Landscape_Destroy(&landscape);
+    Landscape_Destroy();
 
 
     return 0;
