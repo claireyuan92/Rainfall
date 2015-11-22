@@ -24,10 +24,17 @@ typedef struct{
     int N;
     int complete_step;
 } landscape_t;
+<<<<<<< HEAD
 
 typedef landscape_t* Landscape;
 
 
+=======
+
+typedef landscape_t* Landscape;
+
+
+>>>>>>> parent of 8e22957... working sequential code with drained count
 int** read_elevation(char *filename, int N){
     
     int ** elevation;
@@ -60,22 +67,42 @@ int** read_elevation(char *filename, int N){
     for (i=1; i<N-1; i++) {
         for (j=1; j<N-1; j++) {
             fscanf(fptr, "%d", &elevation[i][j]);
+<<<<<<< HEAD
             printf("%d ",elevation[i][j]);
         }
         printf("\n");
+=======
+            //printf("%d ",elevation[i][j]);
+        }
+        //printf("\n");
+>>>>>>> parent of 8e22957... working sequential code with drained count
     }
+    
+    /*
     
     for (i=0; i<N; i++) {
         for (j=0; j<N; j++) {
+<<<<<<< HEAD
             //fscanf(fptr, "%d", &elevation[i][j]);
+=======
+
+>>>>>>> parent of 8e22957... working sequential code with drained count
             printf("%d ",elevation[i][j]);
         }
         printf("\n");
     }
+<<<<<<< HEAD
 
     
     fclose(fptr);
     printf("Finished reading image file !\n");
+=======
+     */
+
+    
+    fclose(fptr);
+    //printf("Finished reading image file !\n");
+>>>>>>> parent of 8e22957... working sequential code with drained count
     
     return elevation;
     
@@ -145,6 +172,7 @@ void Landscape_Destroy(Landscape * landscape){
 int min(int a, int b){
     return a<b? a:b;
 }
+<<<<<<< HEAD
 
 
 
@@ -225,6 +253,8 @@ void RainDrop(landscape_t *landscape, double A, int N){
         }
     }
 }
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 
 bool Absorb(landscape_t * landscape, double A, int N, int k){
     //Traverse over all landscape points
@@ -241,11 +271,26 @@ bool Absorb(landscape_t * landscape, double A, int N, int k){
 
             
             //2) If there are raindrops on a point, absorb water into the point
+<<<<<<< HEAD
             if(fabs(landscape->raindrops[i][j]) > 10e-15){
                 landscape->absorption[i][j]+=A*landscape->raindrops[i][j];
                 landscape->raindrops[i][j]-=A*landscape->raindrops[i][j];
                 flag=true;
             }
+=======
+            if (landscape->raindrops[i][j] > A) {
+                landscape->absorption[i][j]+=A;
+                landscape->raindrops[i][j]-=A;
+                flag=true;
+            }
+            else if(landscape->raindrops[i][j]<=A && landscape->raindrops[i][j]>10e-6){
+                landscape->absorption[i][j]+=landscape->raindrops[i][j];
+                landscape->raindrops[i][j]=0;
+                flag=true;
+            }
+            else{}
+            
+>>>>>>> parent of 8e22957... working sequential code with drained count
             
             //3a) Calculate the amount of raindrops that will next trickle to the lowest neighbor
             if(landscape->raindrops[i][j]>1){
@@ -256,6 +301,7 @@ bool Absorb(landscape_t * landscape, double A, int N, int k){
             }
             
             
+<<<<<<< HEAD
         }
     }
     
@@ -338,6 +384,113 @@ Landscape Rainfall(char *filename, int M, double A, int N){
     return landscape;
     
     
+=======
+        }
+    }
+    
+    
+    //Second traversal over all landscape points
+    for (i=1; i<=N; i++) {
+        for (j=1; j<=N; j++) {
+            
+            //trickle out from current point
+            landscape->raindrops[i][j]-=landscape->trickle[i][j];
+            
+            //trickle to lowest neigbhors
+            
+            int m=min(landscape->elevation[i+1][j],
+                      min(landscape->elevation[i][j+1],
+                          min(landscape->elevation[i-1][j], landscape->elevation[i][j-1])));
+            //printf("%d  ", m);
+            
+            if(m<landscape->elevation[i][j]){
+                
+                int s=0;
+                int x,y;
+                /*
+                for (x=i-1; x<=i+1; x++) {
+                    for (y=j-1; y<=j+1; y++) {
+                        if ( !(x==i-1 && y==j-1) && !(x==i-1 && y==j+1) && !(x==i+1 && y==j-1) && !(x==i+1 && y==j+1)
+                            && m==landscape->elevation[x][y]) {
+                            s++;
+                        }
+                    }
+                }
+                 */
+                
+                if (m==landscape->elevation[i][j-1]) {
+                    s++;
+                }
+                if (m==landscape->elevation[i][j+1]) {
+                    s++;
+                }
+                if (m==landscape->elevation[i-1][j]) {
+                    s++;
+                }
+                if (m==landscape->elevation[i+1][j]) {
+                    s++;
+                }
+                
+                //printf("%lf ", 1.0/s);
+                double portion=landscape->trickle[i][j]/s;
+                
+                //printf("%lf ", portion);
+                /*
+                 
+                
+                for (x=i-1; x<=i+1; x++) {
+                    for (y=j-1; y<=j+1; y++) {
+                        if ( !(x==i-1 && y==j-1) && !(x==i-1 && y==j+1) && !(x==i+1 && y==j-1) && !(x==i+1 && y==j+1)
+                            && m==landscape->elevation[x][y]) {
+                            
+                            landscape->raindrops[x][y]+=portion;
+                        }
+                    }
+                }
+                */
+                if (m==landscape->elevation[i][j-1]) {
+                    landscape->raindrops[i][j-1]+=landscape->trickle[i][j]/s;
+                }
+                if (m==landscape->elevation[i][j+1]) {
+                    landscape->raindrops[i][j+1]+=landscape->trickle[i][j]/s;
+                }
+                if (m==landscape->elevation[i-1][j]) {
+                    landscape->raindrops[i-1][j]+=landscape->trickle[i][j]/s;
+                }
+                if (m==landscape->elevation[i+1][j]) {
+                    landscape->raindrops[i+1][j]+=landscape->trickle[i][j]/s;
+                }
+                
+            }
+            else{
+                landscape->raindrops[i][j]+=landscape->trickle[i][j];
+            }
+            
+            
+        }
+    }
+    
+    return flag;
+    
+}
+
+Landscape Rainfall(char *filename, int M, double A, int N){
+    
+    landscape_t *landscape = Landscape_Init(filename,N);
+    
+    int k=M;
+    
+    landscape->complete_step=0;
+
+    while(Absorb(landscape,A,N,k)) { //continue to absorb until return false;
+        landscape->complete_step++;
+        k--;
+    }
+    
+    return landscape;
+    
+    
+>>>>>>> parent of 8e22957... working sequential code with drained count
 }
 
 
@@ -357,10 +510,22 @@ int main(int argc, char** argv)
     
     double A;
     sscanf(argv[2],"%lf",&A); // absorption rate
+
     
     int N=atoi(argv[3]); // dimensionof the landscape
+<<<<<<< HEAD
     
     landscape = Rainfall(argv[4], M,A,N);
+=======
+    
+    clock_t start=clock();
+    
+    landscape = Rainfall(argv[4], M,A,N);
+    
+    clock_t end = clock();
+    
+    printf("Time consumed %f\n", ((double) (end - start)) / CLOCKS_PER_SEC);
+>>>>>>> parent of 8e22957... working sequential code with drained count
     
     printf("Rainfall simulation took %d time steps to complete.\n", landscape->complete_step);
     
@@ -369,11 +534,19 @@ int main(int argc, char** argv)
     int i, j;
     for (i=1; i<=N; i++) {
         for (j=1; j<=N; j++) {
+<<<<<<< HEAD
             printf("%.2f ", landscape->absorption[i][j]);
+=======
+            printf("%8g ", landscape->absorption[i][j]);
+>>>>>>> parent of 8e22957... working sequential code with drained count
         }
         printf("\n");
     }
     
+<<<<<<< HEAD
+=======
+    /*
+>>>>>>> parent of 8e22957... working sequential code with drained count
     printf("printing raindrops\n");
     for (i=1; i<=N; i++) {
         for (j=1; j<=N; j++) {
@@ -389,6 +562,7 @@ int main(int argc, char** argv)
         printf("\n");
     }
     
+     */
     
     Landscape_Destroy(&landscape);
 
