@@ -27,11 +27,14 @@ typedef struct{
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 typedef landscape_t* Landscape;
 
 
 =======
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 
@@ -39,12 +42,15 @@ typedef landscape_t* Landscape;
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 
 typedef landscape_t* Landscape;
 
 
+>>>>>>> parent of 8e22957... working sequential code with drained count
+=======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
@@ -76,6 +82,7 @@ int** read_elevation(char *filename, int N){
         elevation[0][j]=INT_MAX;
         elevation[N-1][j]=INT_MAX;
 <<<<<<< HEAD
+<<<<<<< HEAD
     }
     
     for (i=1; i<N-1; i++) {
@@ -98,6 +105,18 @@ int** read_elevation(char *filename, int N){
 >>>>>>> parent of 8e22957... working sequential code with drained count
     }
     
+=======
+    }
+    
+    for (i=1; i<N-1; i++) {
+        for (j=1; j<N-1; j++) {
+            fscanf(fptr, "%d", &elevation[i][j]);
+            //printf("%d ",elevation[i][j]);
+        }
+        //printf("\n");
+    }
+    
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
     }
     
@@ -117,7 +136,11 @@ int** read_elevation(char *filename, int N){
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             //fscanf(fptr, "%d", &elevation[i][j]);
+=======
+
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 
 >>>>>>> parent of 8e22957... working sequential code with drained count
@@ -131,6 +154,7 @@ int** read_elevation(char *filename, int N){
         }
         printf("\n");
     }
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -153,11 +177,16 @@ int** read_elevation(char *filename, int N){
     //printf("Finished reading image file !\n");
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
      */
 
     
     fclose(fptr);
     //printf("Finished reading image file !\n");
+<<<<<<< HEAD
+>>>>>>> parent of 8e22957... working sequential code with drained count
+=======
 >>>>>>> parent of 8e22957... working sequential code with drained count
     
     return elevation;
@@ -228,6 +257,7 @@ void Landscape_Destroy(Landscape * landscape){
 int min(int a, int b){
     return a<b? a:b;
 }
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -317,6 +347,8 @@ void RainDrop(landscape_t *landscape, double A, int N){
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 
 bool Absorb(landscape_t * landscape, double A, int N, int k){
     //Traverse over all landscape points
@@ -336,12 +368,15 @@ bool Absorb(landscape_t * landscape, double A, int N, int k){
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             if(fabs(landscape->raindrops[i][j]) > 10e-15){
                 landscape->absorption[i][j]+=A*landscape->raindrops[i][j];
                 landscape->raindrops[i][j]-=A*landscape->raindrops[i][j];
                 flag=true;
             }
 =======
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
@@ -360,6 +395,9 @@ bool Absorb(landscape_t * landscape, double A, int N, int k){
             
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 8e22957... working sequential code with drained count
+=======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
@@ -375,6 +413,7 @@ bool Absorb(landscape_t * landscape, double A, int N, int k){
             }
             
             
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -477,6 +516,12 @@ Landscape Rainfall(char *filename, int M, double A, int N){
     
     
 >>>>>>> parent of 8e22957... working sequential code with drained count
+=======
+        }
+    }
+    
+    
+>>>>>>> parent of 8e22957... working sequential code with drained count
     //Second traversal over all landscape points
     for (i=1; i<=N; i++) {
         for (j=1; j<=N; j++) {
@@ -518,6 +563,9 @@ Landscape Rainfall(char *filename, int M, double A, int N){
                 if (m==landscape->elevation[i+1][j]) {
                     s++;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
                 }
                 
                 //printf("%lf ", 1.0/s);
@@ -536,10 +584,14 @@ Landscape Rainfall(char *filename, int M, double A, int N){
                         }
                     }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
                 }
                 */
                 if (m==landscape->elevation[i][j-1]) {
                     landscape->raindrops[i][j-1]+=landscape->trickle[i][j]/s;
+<<<<<<< HEAD
                 }
                 if (m==landscape->elevation[i][j+1]) {
                     landscape->raindrops[i][j+1]+=landscape->trickle[i][j]/s;
@@ -587,6 +639,18 @@ Landscape Rainfall(char *filename, int M, double A, int N){
                 if (m==landscape->elevation[i+1][j]) {
                     landscape->raindrops[i+1][j]+=landscape->trickle[i][j]/s;
                 }
+=======
+                }
+                if (m==landscape->elevation[i][j+1]) {
+                    landscape->raindrops[i][j+1]+=landscape->trickle[i][j]/s;
+                }
+                if (m==landscape->elevation[i-1][j]) {
+                    landscape->raindrops[i-1][j]+=landscape->trickle[i][j]/s;
+                }
+                if (m==landscape->elevation[i+1][j]) {
+                    landscape->raindrops[i+1][j]+=landscape->trickle[i][j]/s;
+                }
+>>>>>>> parent of 8e22957... working sequential code with drained count
                 
             }
             else{
@@ -619,6 +683,9 @@ Landscape Rainfall(char *filename, int M, double A, int N){
     
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 8e22957... working sequential code with drained count
+=======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
@@ -649,9 +716,12 @@ int main(int argc, char** argv)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     
     landscape = Rainfall(argv[4], M,A,N);
 =======
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
@@ -666,6 +736,9 @@ int main(int argc, char** argv)
     printf("Time consumed %f\n", ((double) (end - start)) / CLOCKS_PER_SEC);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> parent of 8e22957... working sequential code with drained count
+=======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
@@ -682,8 +755,11 @@ int main(int argc, char** argv)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             printf("%.2f ", landscape->absorption[i][j]);
 =======
+=======
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
 >>>>>>> parent of 8e22957... working sequential code with drained count
 =======
@@ -697,6 +773,10 @@ int main(int argc, char** argv)
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+    /*
+>>>>>>> parent of 8e22957... working sequential code with drained count
 =======
     /*
 >>>>>>> parent of 8e22957... working sequential code with drained count
